@@ -1,0 +1,255 @@
+import os
+import sys
+from hashlib import sha256
+import time
+# from math import *
+from random import getrandbits
+from random import randrange
+from unittest import TestCase
+
+from Crypto.Cipher import PKCS1_v1_5
+from Crypto.PublicKey import RSA
+from sage.all import crt
+from sage.all import random_prime
+
+from sage.all import QQ
+from sage.all import RR
+from sage.all import ZZ
+from sage.all import Zmod
+from sage.all import is_prime
+from sage.all import log, ceil, power_mod
+from math import lcm
+# from sage.all import inverse_mod
+
+# from shared.small_roots import blomer_may
+# from shared.small_roots import ernst
+# from shared.small_roots import howgrave_graham
+
+
+path = os.path.dirname(os.path.dirname(os.path.realpath(os.path.abspath(__file__))))
+# path = "/home/sjj/crypto-attacks-master/crypto-attacks-master"
+if sys.path[1] != path:
+    sys.path.insert(1, path)
+
+
+from attacks.rsa import boneh_durfee
+from attacks.rsa import wiener_attack
+
+from attacks.rsa import partial_key_exposure
+
+from test.delta_test import find_variables, validate_variables
+from shared.partial_integer import PartialInteger
+from Crypto.Util.number import getPrime, inverse
+
+def test_boneh_durfee():
+    p = 8336098094107148727215739250963707080193354232606052074990241776806057751063097937695455901732280881799758747566354806329614268491681801070728929809487719
+    q = 7993822961704589238906960066227764664305062439800353823233980661453911264182114490946327954166085482470542508894533242650805870751611764728948539727769981
+    N = p * q
+    phi = (p - 1) * (q - 1)
+    nbits = 277
+    d = random_prime(2**nbits, 2**(nbits-1))
+    d_length = ceil(RR(log(d, 2)))
+    delta = RR(log(d,N))
+    # print("delta =", delta)
+    e = power_mod(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, d_length, 0), m=7, t=4)
+    # p_, q_ = boneh_durfee.attack(N, e, 512, delta=0.275, m=6, t=5)
+    print("p_, q_, d_:", p_, q_, d_)
+
+    nbits = 276
+    d = random_prime(2**nbits, 2**(nbits-1))
+    d_length = ceil(RR(log(d, 2)))
+    delta = RR(log(d,N))
+    # print("delta =", delta)
+    e = power_mod(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, d_length, 0), m=7, t=4)
+    print("p_, q_, d_:", p_, q_, d_)
+
+def test_both_msb_and_lsb():
+    p = 10910578377493709111333790184427664202765704106579350486788097192764075505932456611273616722978391482349202742319580571195628069062856385333010738300159289
+    q = 9543709188272129636130984528523762431366215631912419189389727421314687517826682117237804919302025420051881375430279526592105566649224606602944612854468009
+    N = p * q
+    phi = (p - 1) * (q - 1)
+
+
+    d = 1996027597381396159237243762593978890017801760275363686545665967267636096782071826097658259
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_and_msb_of(d, 300, 10, 195), m=2, t=1)
+    print("lsb and msb 0: ", p_,q_,d_)
+
+    d = 3761842282390824725562943876986788316204251238160857472939673032260930840975186728596615197353278383991036677817804509912115342372613650607583423246001467907396859682584848725034711
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_and_msb_of(d, 600, 10, 465), m=3, t=2)
+    print("lsb and msb 1: p_,q_,d_ is: ", p_,q_,d_)
+
+    # No traversal extra LSB or MSB.
+    # Attacking...Known LSB length is: 10 , Known MSB length is: 465 , d length is: 600 , e length is: 1022
+    # Using Ernst (Appendix C_1)...
+    # Trying m= 3 ,t= 2
+    # flatter not found. Resorting to FPLLL.
+    # Finished basis Flatter reduction. Time: 2783.122117s.
+    # Using Julian's method to find roots...
+    # we found d: 3761842282390824725562943876986788316204251238160857472939673032260930840975186728596615197353278383991036677817804509912115342372613650607583423246001467907396859682584848725034711
+    # lsb and msb 1: p_,q_,d_ is:  9543709188272129636130984528523762431366215631912419189389727421314687517826682117237804919302025420051881375430279526592105566649224606602944612854468009 10910578377493709111333790184427664202765704106579350486788097192764075505932456611273616722978391482349202742319580571195628069062856385333010738300159289 3761842282390824725562943876986788316204251238160857472939673032260930840975186728596615197353278383991036677817804509912115342372613650607583423246001467907396859682584848725034711
+
+    e = 3761842282390824725562943876986788316204251238160857472939673032260930840975186728596615197353278383991036677817804509912115342372613650607583423246001467907396859682584848725034711
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_and_msb_of(d, d.bit_length(), 394, 559), m=2, t=2)
+    print("lsb and msb 2: p_,q_,d_ is: ", p_,q_,d_)
+
+    e = 3761842282390824725562943876986788316204251238160857472939673032260930840975186728596615197353278383991036677817804509912115342372613650607583423246001467907396859682584848725034711
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_and_msb_of(d, d.bit_length(), 392, 556), m=3, t=2)
+    print("lsb and msb 3: p_,q_,d_ is: ", p_,q_,d_)
+
+    # No traversal extra LSB or MSB.
+    # Attacking...Known LSB length is: 392 , Known MSB length is: 556 , d length is: 1023 , e length is: 599
+    # Using Ernst (Appendix C_2)...
+    # Trying m= 3 ,t= 2
+    # flatter not found. Resorting to FPLLL.
+    # Finished basis Flatter reduction. Time: 4277.269478s.
+    # Using Julian's method to find roots...
+    # lsb and msb 3: p_,q_,d_ is:  9543709188272129636130984528523762431366215631912419189389727421314687517826682117237804919302025420051881375430279526592105566649224606602944612854468009 10910578377493709111333790184427664202765704106579350486788097192764075505932456611273616722978391482349202742319580571195628069062856385333010738300159289 52359779231610807593323834710001994742730540715816573014348159292955600003090157476833463623472845837080715318494882609829386240803978326672882095509720197909354587461857445071449512010193288362349899609082766721608580113654041546519965826805789263720254699473588261516795501610916388651532940520280568103655
+
+
+def test_wiener_attack():
+    p = 9216552630349497248854461148903581877939724838581072236002328187229938158716983013925360355301876965491548210304574562739493228847611293721830637308804193
+    q = 6933923262781683366316472659407081840385285455077122235753449057801539822308174027541202209776857105782337372767555342676749125109168114988291773001406719
+    N = p * q
+    phi = (p - 1) * (q - 1)
+    d = 2093053250199478219003151015180677474794706525389145177455257688803129226223
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 251, 0), m=0, t=0)
+
+    # p_, q_, d_ = wiener_attack.attack(N, e)
+    print("p_, q_, d_:", p_, q_, d_)
+
+def orginal_rsa_test():
+    p = 10910578377493709111333790184427664202765704106579350486788097192764075505932456611273616722978391482349202742319580571195628069062856385333010738300159289
+    q = 9543709188272129636130984528523762431366215631912419189389727421314687517826682117237804919302025420051881375430279526592105566649224606602944612854468009
+    N = p * q
+    phi = (p - 1) * (q - 1)
+    '''
+    # print("Using Boneh-Durfee-Frankel (Section 4.3)...")
+    e = 1888808636394051038122079426072690800814635584317577992534820937057888325091552888007695019685284192811882682070476179005
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_and_msb_of(d, 1024, 300, 400), m=4, t=4)
+    print("1: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Blomer-May (Section 6)...")
+    e = 2537076837624948274678559350627766245659466751393060011134223900150777497232270599983842219210375152450024925559795004985
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 1024, 900), m=4, t=2)
+    print("2: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Blomer-May (Section 6)...")
+    e = 2105349305652912552595850746930492757880185195571479788917556245368402422744117397035736756548330291811495322726318885363734942001084342282438104629063513807868365772702460864019481
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 1024, 1000), m=4, t=1)
+    # p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 1024, 1000), m=4, t=2)
+    print("3: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Ernst (Section 4.3)...")
+    d = 3043512099664998067963851819644406828326540226040840386777757880704658912729542968149616478325704429171610434683689846221877333398784455635377825449441
+    e = pow(d, -1, phi)
+    # p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 500, 450), m=2, t=1)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 500, 450), m=3, t=2)
+    print("4: p_,q_,d_ is: ", p_,q_,d_)
+    
+    # print("Using Boneh-Durfee-Frankel (Section 3)...")
+    e = 13
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 1024, 300), m=4, t=4)
+    print("5: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Boneh-Durfee-Frankel Full version (Theorem 3.3)...")
+    ebits = 17
+    e = 2**(ebits-1) + 1
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 1024, 800), m=9, t=5)
+    print("new: p_,q_,d_ is: ", p_,q_,d_)
+    '''
+    # print("Using Boneh-Durfee-Frankel (Section 4.1)...")
+    e = 1342190465933073539882079424718736636251811109323478531285823066337637602613426487933457123523547784034204609585360266973
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 1024, 400), m=7, t=4)
+    print("6: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Boneh-Durfee-Frankel (Section 4.2)...")
+    e = 2202357547053544325766272244614293754573709727782759369088138744825304061898264253795423228965992747533679851108128668707
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 1024, 700), factor_e=False)
+    print("7: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Ernst (Section 4.2)...")
+    # print("Using BM (Section 4)...")
+    e = 3570933230773454036103400438523094494860730146879558128058270144959251135492234076661103748194173734451656482351563013457204873521151688759417651289937071689065482923
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 1024, 800), m=2, t=1)
+    print("8: p_,q_,d_ is: ", p_,q_,d_)
+       
+    # print("Using Ernst (Section 4.1.1)...")
+    d = 1659574478146748254056351432273021460473735684664103384774766229138469185471407591788312141
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 300, 100), m=1, t=0)
+    print("9: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Ernst (Section 4.1.1)...")
+    d = 1996027597381396159237243762593978890017801760275363686545665967267636096782071826097658259
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 300, 200), m=2, t=1)
+    print("10: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Ernst (Section 4.1.2)...")
+    d = 3761842282390824725562943876986788316204251238160857472939673032260930840975186728596615197353278383991036677817804509912115342372613650607583423246001467907396859682584848725034711
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 600, 470), m=3, t=2)
+    print("11: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Ernst (Section 4.1.2)...")
+    d = 3691180879554463786414032222552684036869061510418768071690705916691156971385612730312759706623469266619987662041149793023083742711174850519419974605626258130331917527225448076142783
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 600, 500), m=2, t=1)
+    print("12: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Ernst (Section 4.1.2)...")
+    d = 4905300283357849777532376964856253872884896201321425321351015817211702681734510535471350537031834978240585713416514372877338525414401276727225442844983999756914527067870650280651385699873418363576218246007433933765243491292205
+    e = pow(d, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 750, 745), m=3, t=2)
+    print("13: p_,q_,d_ is: ", p_,q_,d_)
+
+    # print("Using Ernst (Section 4.2)...")
+    e = 4767842339321110001693689370200744188846086437972267976524065388471471723930990821354799430207822500359946317313395866439324920870720597904488739040160497744807293179379758447729820982374513639776505527597410218540393194583329
+    d = pow(e, -1, phi)
+    p_, q_, d_ = partial_key_exposure.pre_attack(N, e, PartialInteger.msb_of(d, 1024, 1000), m=3, t=2)
+    print("14: p_,q_,d_ is: ", p_,q_,d_)
+
+
+def test_extra_traversal():
+    p = 10910578377493709111333790184427664202765704106579350486788097192764075505932456611273616722978391482349202742319580571195628069062856385333010738300159289
+    q = 9543709188272129636130984528523762431366215631912419189389727421314687517826682117237804919302025420051881375430279526592105566649224606602944612854468009
+    N = p * q
+    phi = (p - 1) * (q - 1)
+
+    e = 2537076837624948274678559350627766245659466751393060011134223900150777497232270599983842219210375152450024925559795004985
+    d = pow(e, -1, phi)
+    start = time.time()
+    res = partial_key_exposure.pre_attack(N, e, PartialInteger.lsb_of(d, 1024, 874), m=6, t=2, traversal_bit_length=6, option='LSB')
+    print(type(res))
+    end = time.time()
+    print(end - start)
+    p_, q_, d_ = res
+    print("extra: p_,q_,d_ is: ", p_,q_,d_)
+
+
+if __name__ == "__main__":
+    # test_both_msb_and_lsb()
+    # test_wiener_attack()
+    # test_boneh_durfee()
+    orginal_rsa_test()
+    # test_extra_traversal()
+
+    # 905.2215638160706
+    # extra: p_,q_,d_ is:  9543709188272129636130984528523762431366215631912419189389727421314687517826682117237804919302025420051881375430279526592105566649224606602944612854468009 
+    # 10910578377493709111333790184427664202765704106579350486788097192764075505932456611273616722978391482349202742319580571195628069062856385333010738300159289 
+    # 52794001787776083223686719332165423287847354991042010957657054452390568497211801621586744119725110682455430902299392169247308621518186052417180137456628116731182744854347200547194550077783560988650820195993731764296385440916870923302444579211252901667679575094803475804947548126370407782828045689538792503689
